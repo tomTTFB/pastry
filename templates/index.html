@@ -5,6 +5,17 @@
 </head>
 
 <body>
-    <h1>Hello world</h1>
+    <form action="/new" method="post">
+        <textarea name="content" rows="20" cols="80" required></textarea>
+
+        <select name="language">
+            <option value="text">Plain text</option>
+            <option value="python">Python</option>
+        </select>
+
+        <input type="checkbox" id="burn_after_read_box" name="burn_after_read" value="true">
+
+        <button type="submit">Create Paste</button>
+    </form>
 </body>
 </html>
