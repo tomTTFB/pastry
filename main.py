@@ -2,6 +2,12 @@ from flask import Flask, render_template, request, redirect, url_for, abort
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 
+from pygments import highlight
+from pygments.lexers import get_lexer_by_name, TextLexer
+from pygments.formatters import HtmlFormatter
+from pygments.util import ClassNotFound
+from markupsafe import Markup
+
 import os
 from datetime import datetime
 import secrets
@@ -28,6 +34,15 @@ class Paste(db.Model):
     def __repr__(self):
         return f"Name : {self.first_name}, Age: {self.age}"
 
+def highlight_paste(content, language):
+    try:
+        lexer = get_lexer_by_name(language)
+    except ClassNotFound:
+        lexer = TextLexer()
+    formatter = HtmlFormatter(linenos=True)
+    return Markup(highlight(content, lexer, formatter))
+
+
 @app.route('/')
 def hello_world():
     return render_template("index.html")
@@ -52,18 +67,25 @@ def add_paste():
     db.session.add(paste)
     db.session.commit()
 
-    return redirect(url_for('view_paste', id=paste.id))
+    highlighted = highlight_paste(paste.content, paste.language)
+
+    return render_template("newpaste.html", id=paste.id, content=paste.content, created_at=paste.created_at, language=paste.language, highlighted=highlighted)
 
 @app.route('/view_paste/<id>')
 def view_paste(id):
     paste = db.session.get(Paste, id)
-    try:
-        if paste.burn_after_read == True:
-            db.session.delete(paste)
-            db.session.commit()
-    except:
+    if paste is None:
         abort(404)
-    return render_template("paste.html", content=paste.content, created_at=paste.created_at)
+
+    highlighted = highlight_paste(paste.content, paste.language)
+
+    burn = paste.burn_after_read
+
+    if burn is True:
+        db.session.delete(paste)
+        db.session.commit()
+
+    return render_template("paste.html", content=paste.content, created_at=paste.created_at, language=paste.language, highlighted=highlighted, burned=burn)
 
 if __name__ == "__main__":
     with app.app_context():
